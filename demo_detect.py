@@ -15,14 +15,14 @@ import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 
-import _init_paths
-import models
-import datasets
-from config import config
-from config import update_config
-from core.function import testval, test
-from utils.modelsummary import get_model_summary
-from utils.utils import create_logger, FullModel, speed_test
+from tools import _init_paths
+from lib.models import *
+from lib import datasets
+from lib.config import config
+from lib.config import update_config
+from lib.core.function import testval, test
+from lib.utils.modelsummary import get_model_summary
+from lib.utils.utils import create_logger, FullModel, speed_test
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train segmentation network')
@@ -37,7 +37,7 @@ def parse_args():
                         nargs=argparse.REMAINDER)
 
     args, unknown = parser.parse_known_args()
-    update_config(config, args)
+    #update_config(config, args)
 
     return args
 
@@ -64,7 +64,7 @@ def main():
     if config.TEST.MODEL_FILE:
         model_state_file = config.TEST.MODEL_FILE
     else:
-        model_state_file = os.path.join(final_output_dir, 'best.pth')      
+        model_state_file = 'pretrained_models/best_val_smaller.pth' #.path.join(final_output_dir, 'best.pth')      
         # model_state_file = os.path.join(final_output_dir, 'final_state.pth')      
     logger.info('=> loading model from {}'.format(model_state_file))
         
@@ -80,7 +80,7 @@ def main():
     model_dict.update(pretrained_dict)
     model.load_state_dict(model_dict)
 
-    device = torch.device('0')
+    device = torch.device('cuda:0')
     model.to(device).cuda()
     #model = nn.DataParallel(model, device_ids=gpus).cuda()
 
