@@ -5,7 +5,6 @@ __pycache__/
 data/cityscapes/
 log/
 output/
-pretrained_models
 scripts/
 detail-api/
 data/list
