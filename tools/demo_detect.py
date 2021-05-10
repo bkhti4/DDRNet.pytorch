@@ -20,11 +20,12 @@ import _init_paths
 import models
 from config import config
 import datasets
+from datasets.base_dataset import *
 #from lib.config import config
 from config import update_config
-from core.function import testval, test
+#from core.function import testval, test
 from utils.modelsummary import get_model_summary
-from utils.utils import create_logger, FullModel, speed_test
+from utils.utils import create_logger, FullModel, speed_test, Map16
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train segmentation network')
@@ -90,21 +91,22 @@ def main():
     #model = nn.DataParallel(model, device_ids=gpus).cuda()
 
     # prepare data
-    test_size = (config.TEST.IMAGE_SIZE[1], config.TEST.IMAGE_SIZE[0])
+    test_size = (1024, 512)
     
     start = timeit.default_timer()
     cap = cv2.VideoCapture(args.source)
     sv_pred = True
     model.eval()
+    bdataset = BaseDataset()
 
     while True:
       ret, image = cap.read()
       
       with torch.no_grad():
         image = cv2.resize(image, test_size, interpolation = cv2.INTER_AREA)
-        w, h, ch = image.shape
-        size = (w, h)
-        pred = multi_scale_inference(config, model, image, scales=config.TEST.SCALE_LIST, flip=config.TEST.FLIP_TEST)
+        h, w, ch = image.shape
+        size = (h, w)
+        pred = bdataset.multi_scale_inference(config, model, image)
 
         if pred.size()[-2] != size[0] or pred.size()[-1] != size[1]:
           pred = F.interpolate(pred, size[-2:], mode='bilinear', align_corners=config.MODEL.ALIGN_CORNERS)
@@ -121,7 +123,7 @@ def main():
 
           _, pred = torch.max(pred, dim=1)
           pred = pred.squeeze(0).cpu().numpy()
-          img8_out = map16.visualize_result(image, pred)
+          img8_out = Map16.visualize_result(image, pred)
         msg = 'MeanIoU: {: 4.4f}, Pixel_Acc: {: 4.4f}, \ Mean_Acc: {: 4.4f}, Class IoU: '.format(mean_IoU, pixel_acc, mean_acc)
         logging.info(msg)
         logging.info(IoU_array)

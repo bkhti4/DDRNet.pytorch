@@ -17,7 +17,7 @@ from torch.utils import data
 from config import config
 
 
-class BaseDataset(data.Dataset):
+class BaseDataset():
     def __init__(self,
                  ignore_label=-1,
                  base_size=2048,
@@ -35,11 +35,8 @@ class BaseDataset(data.Dataset):
         self.std = std
         self.scale_factor = scale_factor
         self.downsample_rate = 1./downsample_rate
+        self.num_classes = 12
 
-        self.files = []
-
-    def __len__(self):
-        return len(self.files)
 
     def input_transform(self, image):
         image = image.astype(np.float32)[:, :, ::-1]
@@ -90,7 +87,7 @@ class BaseDataset(data.Dataset):
             new_w = long_size
             new_h = np.int(h * long_size / w + 0.5)
 
-        image = cv2.resize(image, (new_w, new_h),
+        image = cv2.resize(image, (new_h, new_w),
                            interpolation=cv2.INTER_LINEAR)
         if label is not None:
             label = cv2.resize(label, (new_w, new_h),
@@ -222,18 +219,18 @@ class BaseDataset(data.Dataset):
         return pred.exp()
 
     def multi_scale_inference(self, config, model, image, scales=[1], flip=False):
-        batch, _, ori_height, ori_width = image.size()
-        assert batch == 1, "only supporting batchsize 1."
-        image = image.numpy()[0].transpose((1, 2, 0)).copy()
+        ori_height, ori_width, _ = image.shape
+        #assert batch == 1, "only supporting batchsize 1."
+        image = image.transpose((1, 2, 0)).copy()
         stride_h = np.int(self.crop_size[0] * 2.0 / 3.0)
         stride_w = np.int(self.crop_size[1] * 2.0 / 3.0)
         final_pred = torch.zeros([1, self.num_classes,
                                   ori_height, ori_width]).cuda()
         padvalue = -1.0 * np.array(self.mean) / np.array(self.std)
         for scale in scales:
-            new_img = self.multi_scale_aug(image=image,
-                                           rand_scale=scale,
-                                           rand_crop=False)
+            new_img = image #self.multi_scale_aug(image=image,
+                            #               rand_scale=scale,
+                            #               rand_crop=False)
             height, width = new_img.shape[:-1]
 
             if max(height, width) <= np.min(self.crop_size):
