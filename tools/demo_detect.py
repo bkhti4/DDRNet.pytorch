@@ -37,10 +37,9 @@ def parse_args():
                         help="Modify config options using the command-line",
                         default=None,
                         nargs=argparse.REMAINDER)
-    parser.add_argument('source',
+    parser.add_argument('--source',
                         help="Video path",
-                        default='ImageProcessing/videos/citscape.mp4',
-                        nargs=argparse.REMAINDER)
+                        default='challenge.mp4')
 
     args, unknown = parser.parse_known_args()
     update_config(config, args)
@@ -95,6 +94,7 @@ def main():
     
     start = timeit.default_timer()
     cap = cv2.VideoCapture(args.source)
+    sv_pred = True
     model.eval()
 
     while True:
@@ -102,8 +102,9 @@ def main():
       
       with torch.no_grad():
         image = cv2.resize(image, test_size, interpolation = cv2.INTER_AREA)
-        size = image.size()
-        pred = test_dataset.multi_scale_inference(config, model, image, scales=config.TEST.SCALE_LIST, flip=config.TEST.FLIP_TEST)
+        w, h, ch = image.shape
+        size = (w, h)
+        pred = multi_scale_inference(config, model, image, scales=config.TEST.SCALE_LIST, flip=config.TEST.FLIP_TEST)
 
         if pred.size()[-2] != size[0] or pred.size()[-1] != size[1]:
           pred = F.interpolate(pred, size[-2:], mode='bilinear', align_corners=config.MODEL.ALIGN_CORNERS)
@@ -120,7 +121,7 @@ def main():
 
           _, pred = torch.max(pred, dim=1)
           pred = pred.squeeze(0).cpu().numpy()
-          #map16.visualize_result(image, pred)
+          map16.visualize_result(image, pred)
         msg = 'MeanIoU: {: 4.4f}, Pixel_Acc: {: 4.4f}, \ Mean_Acc: {: 4.4f}, Class IoU: '.format(mean_IoU, pixel_acc, mean_acc)
         logging.info(msg)
         logging.info(IoU_array)
