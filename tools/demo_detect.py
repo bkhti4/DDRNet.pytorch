@@ -121,7 +121,7 @@ def main():
 
           _, pred = torch.max(pred, dim=1)
           pred = pred.squeeze(0).cpu().numpy()
-          map16.visualize_result(image, pred)
+          img8_out = map16.visualize_result(image, pred)
         msg = 'MeanIoU: {: 4.4f}, Pixel_Acc: {: 4.4f}, \ Mean_Acc: {: 4.4f}, Class IoU: '.format(mean_IoU, pixel_acc, mean_acc)
         logging.info(msg)
         logging.info(IoU_array)

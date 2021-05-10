@@ -184,7 +184,7 @@ class Vedio(object):
 
 
 class Map16(object):
-    def __init__(self, vedioCap, visualpoint=True):
+    def __init__(self):
         self.names = ("background", "floor", "bed", "cabinet,wardrobe,bookcase,shelf",
                 "person", "door", "table,desk,coffee", "chair,armchair,sofa,bench,swivel,stool",
                 "rug", "railing", "column", "refrigerator", "stairs,stairway,step", "escalator", "wall",
@@ -206,11 +206,11 @@ class Map16(object):
                     [128, 128, 0 ],
                     [128, 128, 128 ],
                     [192, 192, 192 ]], dtype=np.uint8)
-        self.outDir = "output/map16"
-        self.vedioCap = vedioCap
-        self.visualpoint = visualpoint
+        #self.outDir = "output/map16"
+        #self.vedioCap = vedioCap
+        #self.visualpoint = visualpoint
     
-    def visualize_result(self, data, pred, dir, img_name=None):
+    def visualize_result(self, data, pred):
         img = data
 
         pred = np.int32(pred)
@@ -222,21 +222,6 @@ class Map16(object):
             if ratio > 0.1:
                 print("  {}: {:.2f}%".format(name, ratio))
 
-        # calculate point
-        if self.visualpoint:
-            #转化为灰度float32类型进行处理
-            img = img.copy()
-            img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            img_gray = np.float32(img_gray)
-            #得到角点坐标向量
-            goodfeatures_corners = cv2.goodFeaturesToTrack(img_gray, 400, 0.01, 10)
-            goodfeatures_corners = np.int0(goodfeatures_corners)
-            # 注意学习这种遍历的方法（写法）
-            for i in goodfeatures_corners:
-                #注意到i 是以列表为元素的列表，所以需要flatten或者ravel一下。    
-                x,y = i.flatten()
-                cv2.circle(img,(x,y), 3, [0,255,], -1)
-
         # colorize prediction
         pred_color = colorEncode(pred, self.colors).astype(np.uint8)
 
@@ -244,13 +229,7 @@ class Map16(object):
         im_vis = im_vis.astype(np.uint8)
 
         # for vedio result show
-        self.vedioCap.addImage(im_vis, pred_color)
-
-        img_name = img_name
-        if not os.path.exists(dir):
-            os.makedirs(dir)
-        Image.fromarray(im_vis).save(
-            os.path.join(dir, img_name))
+        return im_vis
 
 
 def speed_test(model, size=896, iteration=100):
