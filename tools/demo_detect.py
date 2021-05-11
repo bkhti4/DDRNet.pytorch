@@ -70,8 +70,7 @@ def main():
     if config.TEST.MODEL_FILE:
         model_state_file = config.TEST.MODEL_FILE
     else:
-        model_state_file = 'pretrained_models/best_val_smaller.pth' #.path.join(final_output_dir, 'best.pth')      
-        # model_state_file = os.path.join(final_output_dir, 'final_state.pth')      
+        model_state_file = 'pretrained_models/best_val_smaller.pth'
     logger.info('=> loading model from {}'.format(model_state_file))
         
     pretrained_dict = torch.load(model_state_file)
