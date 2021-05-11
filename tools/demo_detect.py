@@ -15,12 +15,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
+from torch.nn import functional as F
 
 import _init_paths
 import models
 from config import config
 import datasets
-from datasets.base_dataset import *
+from datasets.base_dataset import BaseDataset
 #from lib.config import config
 from config import update_config
 #from core.function import testval, test
@@ -87,34 +88,39 @@ def main():
 
     device = torch.device('cuda:0')
     model.to(device).cuda()
-    #model = nn.DataParallel(model, device_ids=gpus).cuda()
 
     # prepare data
-    test_size = (1024, 512)
+    test_size = (config.TEST.IMAGE_SIZE[1], config.TEST.IMAGE_SIZE[0])
     
-    start = timeit.default_timer()
     cap = cv2.VideoCapture(args.source)
     sv_pred = True
     model.eval()
+    print(config.DATASET.DATASET)
     bdataset = BaseDataset()
+    map16 = Map16()
 
     while True:
       ret, image = cap.read()
       
       with torch.no_grad():
-        image = cv2.resize(image, test_size, interpolation = cv2.INTER_AREA)
-        h, w, ch = image.shape
+        h, w, _ = image.shape
         size = (h, w)
+        image = bdataset.input_transform(image)
+        image = image.transpose((2, 0, 1))
         pred = bdataset.multi_scale_inference(config, model, image)
 
-        if pred.size()[-2] != size[0] or pred.size()[-1] != size[1]:
-          pred = F.interpolate(pred, size[-2:], mode='bilinear', align_corners=config.MODEL.ALIGN_CORNERS)
+        start = time.time()
+        if pred.size()[-2] != size[-2] or pred.size()[-1] != size[-1]:
+            pred = F.interpolate(
+                pred, size[-2:],
+                mode='bilinear', align_corners=config.MODEL.ALIGN_CORNERS
+            )
 
         if sv_pred:
           # mean=[0.485, 0.456, 0.406],
           #  std=[0.229, 0.224, 0.225]
-          image = image.squeeze(0)
-          image = image.numpy().transpose((1,2,0))
+          #image = image.squeeze(0)
+          image = image.transpose((1,2,0))
           image *= [0.229, 0.224, 0.225]
           image += [0.485, 0.456, 0.406]
           image *= 255.0
@@ -122,12 +128,16 @@ def main():
 
           _, pred = torch.max(pred, dim=1)
           pred = pred.squeeze(0).cpu().numpy()
-          img8_out = Map16.visualize_result(image, pred)
-        msg = 'MeanIoU: {: 4.4f}, Pixel_Acc: {: 4.4f}, \ Mean_Acc: {: 4.4f}, Class IoU: '.format(mean_IoU, pixel_acc, mean_acc)
-        logging.info(msg)
-        logging.info(IoU_array)
-        end = timeit.default_timer()
-        logger.info('Mins: %d' % np.int((end-start)/60))
+          img8_out = map16.visualize_result(image, pred)
+        #msg = 'MeanIoU: {: 4.4f}, Pixel_Acc: {: 4.4f}, \ Mean_Acc: {: 4.4f}, Class IoU: '.format(mean_IoU, pixel_acc, mean_acc)
+        #logging.info(msg)
+        #logging.info(IoU_array)
+        cv2.imshow("DDRNET", img8_out)
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            cv2.destroyAllWindows()
+            break
+        end = time.time()
+        logger.info('Mins: %f, FPS: %f' % (np.int((end-start)/60), (1/(end-start))))
 
     cap.release()
 

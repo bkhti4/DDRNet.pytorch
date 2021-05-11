@@ -21,7 +21,7 @@ class BaseDataset():
     def __init__(self,
                  ignore_label=-1,
                  base_size=2048,
-                 crop_size=(512, 1024),
+                 crop_size=(1024, 2048),
                  downsample_rate=1,
                  scale_factor=16,
                  mean=[0.485, 0.456, 0.406],
@@ -35,7 +35,7 @@ class BaseDataset():
         self.std = std
         self.scale_factor = scale_factor
         self.downsample_rate = 1./downsample_rate
-        self.num_classes = 12
+        self.num_classes = 19
 
 
     def input_transform(self, image):
@@ -189,7 +189,7 @@ class BaseDataset():
 
     def inference(self, config, model, image, flip=False):
         size = image.size()
-        pred = model(image)
+        pred = model(image.to("cuda:0"))
 
         if config.MODEL.NUM_OUTPUTS > 1:
             pred = pred[config.TEST.OUTPUT_INDEX]
@@ -222,37 +222,32 @@ class BaseDataset():
         ori_height, ori_width, _ = image.shape
         #assert batch == 1, "only supporting batchsize 1."
         image = image.transpose((1, 2, 0)).copy()
-        stride_h = np.int(self.crop_size[0] * 2.0 / 3.0)
-        stride_w = np.int(self.crop_size[1] * 2.0 / 3.0)
+        stride_h = np.int(self.crop_size[0] * 1.0)
+        stride_w = np.int(self.crop_size[1] * 1.0)
         final_pred = torch.zeros([1, self.num_classes,
                                   ori_height, ori_width]).cuda()
-        padvalue = -1.0 * np.array(self.mean) / np.array(self.std)
+        #padvalue = -1.0 * np.array(self.mean) / np.array(self.std)
         for scale in scales:
-            new_img = image #self.multi_scale_aug(image=image,
-                            #               rand_scale=scale,
-                            #               rand_crop=False)
+            new_img = self.multi_scale_aug(image=image,
+                                           rand_scale=scale,
+                                           rand_crop=False)
             height, width = new_img.shape[:-1]
-
-            if max(height, width) <= np.min(self.crop_size):
-                new_img = self.pad_image(new_img, height, width,
-                                         self.crop_size, padvalue)
+                
+            if scale <= 1.0:
                 new_img = new_img.transpose((2, 0, 1))
                 new_img = np.expand_dims(new_img, axis=0)
                 new_img = torch.from_numpy(new_img)
                 preds = self.inference(config, model, new_img, flip)
                 preds = preds[:, :, 0:height, 0:width]
             else:
-                if height < self.crop_size[0] or width < self.crop_size[1]:
-                    new_img = self.pad_image(new_img, height, width,
-                                             self.crop_size, padvalue)
                 new_h, new_w = new_img.shape[:-1]
-                rows = np.int(np.ceil(1.0 * (new_h -
-                                             self.crop_size[0]) / stride_h)) + 1
-                cols = np.int(np.ceil(1.0 * (new_w -
-                                             self.crop_size[1]) / stride_w)) + 1
+                rows = np.int(np.ceil(1.0 * (new_h - 
+                                self.crop_size[0]) / stride_h)) + 1
+                cols = np.int(np.ceil(1.0 * (new_w - 
+                                self.crop_size[1]) / stride_w)) + 1
                 preds = torch.zeros([1, self.num_classes,
-                                     new_h, new_w]).cuda()
-                count = torch.zeros([1, 1, new_h, new_w]).cuda()
+                                           new_h,new_w]).cuda()
+                count = torch.zeros([1,1, new_h, new_w]).cuda()
 
                 for r in range(rows):
                     for c in range(cols):
@@ -260,25 +255,21 @@ class BaseDataset():
                         w0 = c * stride_w
                         h1 = min(h0 + self.crop_size[0], new_h)
                         w1 = min(w0 + self.crop_size[1], new_w)
+                        h0 = max(int(h1 - self.crop_size[0]), 0)
+                        w0 = max(int(w1 - self.crop_size[1]), 0)
                         crop_img = new_img[h0:h1, w0:w1, :]
-                        if h1 == new_h or w1 == new_w:
-                            crop_img = self.pad_image(crop_img,
-                                                      h1-h0,
-                                                      w1-w0,
-                                                      self.crop_size,
-                                                      padvalue)
                         crop_img = crop_img.transpose((2, 0, 1))
                         crop_img = np.expand_dims(crop_img, axis=0)
                         crop_img = torch.from_numpy(crop_img)
                         pred = self.inference(config, model, crop_img, flip)
-                        preds[:, :, h0:h1, w0:w1] += pred[:, :, 0:h1-h0, 0:w1-w0]
-                        count[:, :, h0:h1, w0:w1] += 1
+                        preds[:,:,h0:h1,w0:w1] += pred[:,:, 0:h1-h0, 0:w1-w0]
+                        count[:,:,h0:h1,w0:w1] += 1
                 preds = preds / count
-                preds = preds[:, :, :height, :width]
+                preds = preds[:,:,:height,:width]
 
             preds = F.interpolate(
-                preds, (ori_height, ori_width),
+                preds, (ori_height, ori_width), 
                 mode='bilinear', align_corners=config.MODEL.ALIGN_CORNERS
-            )
+            )            
             final_pred += preds
         return final_pred
