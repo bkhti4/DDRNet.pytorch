@@ -19,6 +19,7 @@ from config import config
 
 class BaseDataset():
     def __init__(self,
+                 num_classes=19,
                  ignore_label=-1,
                  base_size=2048,
                  crop_size=(1024, 2048),

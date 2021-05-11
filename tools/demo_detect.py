@@ -42,6 +42,10 @@ def parse_args():
     parser.add_argument('--source',
                         help="Video path",
                         default='challenge.mp4')
+    parser.add_argument('--show',
+                        default=False,
+                        type=bool,
+                        help='If True display video')
 
     args, unknown = parser.parse_known_args()
     update_config(config, args)
@@ -96,11 +100,17 @@ def main():
     sv_pred = True
     model.eval()
     print(config.DATASET.DATASET)
-    bdataset = BaseDataset()
+    bdataset = BaseDataset(num_classes=config.DATASET.NUM_CLASSES,
+                        ignore_label=config.TRAIN.IGNORE_LABEL,
+                        base_size=config.TEST.BASE_SIZE,
+                        crop_size=test_size,
+                        downsample_rate=1)
+    
     map16 = Map16()
 
     while True:
       ret, image = cap.read()
+      image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
       
       with torch.no_grad():
         h, w, _ = image.shape
@@ -116,7 +126,7 @@ def main():
                 mode='bilinear', align_corners=config.MODEL.ALIGN_CORNERS
             )
 
-        if sv_pred:
+        if args.show:
           # mean=[0.485, 0.456, 0.406],
           #  std=[0.229, 0.224, 0.225]
           #image = image.squeeze(0)
@@ -129,15 +139,12 @@ def main():
           _, pred = torch.max(pred, dim=1)
           pred = pred.squeeze(0).cpu().numpy()
           img8_out = map16.visualize_result(image, pred)
-        #msg = 'MeanIoU: {: 4.4f}, Pixel_Acc: {: 4.4f}, \ Mean_Acc: {: 4.4f}, Class IoU: '.format(mean_IoU, pixel_acc, mean_acc)
-        #logging.info(msg)
-        #logging.info(IoU_array)
-        cv2.imshow("DDRNET", img8_out)
-        if cv2.waitKey(1) & 0xFF == ord("q"):
+          cv2.imshow("DDRNET", img8_out)
+          if cv2.waitKey(1) & 0xFF == ord("q"):
             cv2.destroyAllWindows()
             break
-        end = time.time()
-        logger.info('Mins: %f, FPS: %f' % (np.int((end-start)/60), (1/(end-start))))
+      end = time.time()
+      logger.info('Inference Performance in Seconds: %f, FPS: %f' % ((end-start) * 1000, (1/((end-start)*1000))))
 
     cap.release()
 

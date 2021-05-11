@@ -185,8 +185,8 @@ class Vedio(object):
 
 class Map16(object):
     def __init__(self):
-        self.names = ("background", "floor", "bed", "cabinet,wardrobe,bookcase,shelf",
-                "person", "door", "table,desk,coffee", "chair,armchair,sofa,bench,swivel,stool",
+        self.names = ("car", "truck", "motorcycle", "bicycle", "caravan",
+                "fence", "bridge", "table,desk,coffee", "chair,armchair,sofa,bench,swivel,stool",
                 "rug", "railing", "column", "refrigerator", "stairs,stairway,step", "escalator", "wall",
                 "dog", "plant")
         self.colors  = np.array([[0, 0, 0],
@@ -216,11 +216,11 @@ class Map16(object):
         pred = np.int32(pred)
         pixs = pred.size
         uniques, counts = np.unique(pred, return_counts=True)
-        for idx in np.argsort(counts)[::-1]:
-            name = self.names[uniques[idx]]
-            ratio = counts[idx] / pixs * 100
-            if ratio > 0.1:
-                print("  {}: {:.2f}%".format(name, ratio))
+        #for idx in np.argsort(counts)[::-1]:
+        #    name = self.names[uniques[idx]]
+        #    ratio = counts[idx] / pixs * 100
+        #    if ratio > 0.1:
+        #        print("  {}: {:.2f}%".format(name, ratio))
 
         # colorize prediction
         pred_color = colorEncode(pred, self.colors).astype(np.uint8)
