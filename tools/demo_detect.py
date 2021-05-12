@@ -75,7 +75,7 @@ def main():
     if config.TEST.MODEL_FILE:
         model_state_file = config.TEST.MODEL_FILE
     else:
-        model_state_file = 'pretrained_models/best_val_smaller.pth'
+        model_state_file = 'pretrained_models/hrnet_ocr_cs_8162_torch11.pth'
     logger.info('=> loading model from {}'.format(model_state_file))
         
     pretrained_dict = torch.load(model_state_file)
