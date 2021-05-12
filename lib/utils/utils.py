@@ -206,9 +206,7 @@ class Map16(object):
                     [128, 128, 0 ],
                     [128, 128, 128 ],
                     [192, 192, 192 ]], dtype=np.uint8)
-        #self.outDir = "output/map16"
-        #self.vedioCap = vedioCap
-        #self.visualpoint = visualpoint
+
     
     def visualize_result(self, data, pred):
         img = data
