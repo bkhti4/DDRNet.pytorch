@@ -9,6 +9,7 @@ import os
 import cv2
 import numpy as np
 import random
+from PIL import Image
 
 import torch
 from torch.nn import functional as F
@@ -38,6 +39,23 @@ class BaseDataset():
         self.downsample_rate = 1./downsample_rate
         self.num_classes = 19
 
+        self.label_mapping = {-1: ignore_label, 0: ignore_label, 
+                              1: ignore_label, 2: ignore_label, 
+                              3: ignore_label, 4: ignore_label, 
+                              5: ignore_label, 6: ignore_label, 
+                              7: 0, 8: 1, 9: ignore_label, 
+                              10: ignore_label, 11: 2, 12: 3, 
+                              13: 4, 14: ignore_label, 15: ignore_label, 
+                              16: ignore_label, 17: 5, 18: ignore_label, 
+                              19: 6, 20: 7, 21: 8, 22: 9, 23: 10, 24: 11,
+                              25: 12, 26: 13, 27: 14, 28: 15, 
+                              29: ignore_label, 30: ignore_label, 
+                              31: 16, 32: 17, 33: 18}
+        self.class_weights = torch.FloatTensor([0.8373, 0.918, 0.866, 1.0345, 
+                                        1.0166, 0.9969, 0.9754, 1.0489,
+                                        0.8786, 1.0023, 0.9539, 0.9843, 
+                                        1.1116, 0.9037, 1.0865, 1.0955, 
+                                        1.0865, 1.1529, 1.0507]).cuda()
 
     def input_transform(self, image):
         image = image.astype(np.float32)[:, :, ::-1]
@@ -59,6 +77,16 @@ class BaseDataset():
                                            value=padvalue)
 
         return pad_image
+
+    def convert_label(self, label, inverse=False):
+        temp = label.copy()
+        if inverse:
+            for v, k in self.label_mapping.items():
+                label[temp == k] = v
+        else:
+            for k, v in self.label_mapping.items():
+                label[temp == k] = v
+        return label
 
     def rand_crop(self, image, label):
         h, w = image.shape[:-1]
@@ -189,7 +217,7 @@ class BaseDataset():
         return encoded_labelmap
 
     def inference(self, config, model, image, flip=False):
-        size = image.size()
+        size = image.shape
         pred = model(image.to("cuda:0"))
 
         if config.MODEL.NUM_OUTPUTS > 1:
@@ -223,8 +251,6 @@ class BaseDataset():
         _, ori_height, ori_width = image.shape
         #assert batch == 1, "only supporting batchsize 1."
         image = image.transpose((1, 2, 0)).copy()
-        stride_h = np.int(self.crop_size[0] * 1.0)
-        stride_w = np.int(self.crop_size[1] * 1.0)
         final_pred = torch.zeros([1, self.num_classes,
                                   ori_height, ori_width]).cuda()
         #padvalue = -1.0 * np.array(self.mean) / np.array(self.std)
@@ -247,3 +273,31 @@ class BaseDataset():
             )            
             final_pred += preds
         return final_pred
+
+    def get_palette(self, n):
+        palette = [0] * (n * 3)
+        for j in range(0, n):
+            lab = j
+            palette[j * 3 + 0] = 0
+            palette[j * 3 + 1] = 0
+            palette[j * 3 + 2] = 0
+            i = 0
+            while lab:
+                palette[j * 3 + 0] |= (((lab >> 0) & 1) << (7 - i))
+                palette[j * 3 + 1] |= (((lab >> 1) & 1) << (7 - i))
+                palette[j * 3 + 2] |= (((lab >> 2) & 1) << (7 - i))
+                i += 1
+                lab >>= 3
+        return palette
+
+    def save_pred(self, preds):
+        palette = self.get_palette(256)
+        save_img = np.array([])
+        preds = np.asarray(np.argmax(preds.cpu(), axis=1), dtype=np.uint8)
+        for i in range(preds.shape[0]):
+            pred = self.convert_label(preds[i], inverse=True)
+            save_img = Image.fromarray(pred)
+            save_img.putpalette(palette)
+            save_img.save('pred.png')
+            save_img = np.asarray(save_img)
+        return save_img

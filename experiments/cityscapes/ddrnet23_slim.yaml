@@ -1,5 +1,5 @@
 CUDNN:
-  BENCHMARK: true
+  BENCHMARK: false
   DETERMINISTIC: false
   ENABLED: true
 GPUS: (0,)
@@ -46,11 +46,11 @@ TRAIN:
   SCALE_FACTOR: 16
 TEST:
   IMAGE_SIZE:
-  - 1024
+  - 512
   - 512
   BASE_SIZE: 2048
   BATCH_SIZE_PER_GPU: 1
-  FLIP_TEST: false
+  FLIP_TEST: true
   MULTI_SCALE: false
   SCALE_LIST: [1]
   #0.5,0.75,1.0,1.25,1.5,1.75

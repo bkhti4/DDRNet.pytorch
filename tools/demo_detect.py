@@ -58,8 +58,8 @@ def main():
     logger, final_output_dir, _ = create_logger(
         config, args.cfg, 'test')
 
-    logger.info(pprint.pformat(args))
-    logger.info(pprint.pformat(config))
+    #logger.info(pprint.pformat(args))
+    #logger.info(pprint.pformat(config))
 
     # cudnn related setting
     cudnn.benchmark = config.CUDNN.BENCHMARK
@@ -84,9 +84,9 @@ def main():
     model_dict = model.state_dict()
     pretrained_dict = {k[6:]: v for k, v in pretrained_dict.items()
                         if k[6:] in model_dict.keys()}
-    for k, _ in pretrained_dict.items():
-        logger.info(
-            '=> loading {} from pretrained model'.format(k))
+    #for k, _ in pretrained_dict.items():
+    #    logger.info(
+    #        '=> loading {} from pretrained model'.format(k))
     model_dict.update(pretrained_dict)
     model.load_state_dict(model_dict)
 
@@ -112,9 +112,8 @@ def main():
 
     while True:
       ret, image = cap.read()
-      image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-      image = cv2.resize(image, (1024, image.shape[0]), interpolation = cv2.INTER_AREA)
-      image = cv2.resize(image, (image.shape[1], 512), interpolation = cv2.INTER_AREA)
+      #image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+      image = cv2.resize(image, test_size)
       h, w, _ = image.shape
       size = (h, w)
       image = bdataset.input_transform(image)
@@ -124,7 +123,7 @@ def main():
       with torch.no_grad():
         pred = bdataset.multi_scale_inference(config, model, image)
 
-        if pred.size()[-2] != size[-2] or pred.size()[-1] != size[-1]:
+        if pred.size()[-2] != size[0] or pred.size()[-1] != size[1]:
             pred = F.interpolate(
                 pred, size[-2:],
                 mode='bilinear', align_corners=config.MODEL.ALIGN_CORNERS
@@ -136,7 +135,9 @@ def main():
         image = image.astype(np.uint8)
 
         _, pred = torch.max(pred, dim=1)
-        pred = pred.squeeze(0).detach().cpu().numpy()
+        pred = pred.squeeze(0).cpu().numpy()
+
+        print("Output shape: ", pred.shape)
 
         img8_out = map16.visualize_result(image, pred)
 

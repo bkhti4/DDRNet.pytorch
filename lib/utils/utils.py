@@ -185,45 +185,62 @@ class Vedio(object):
 
 class Map16(object):
     def __init__(self):
-        self.names = ("car", "truck", "motorcycle", "bicycle", "caravan",
-                "fence", "bridge", "table,desk,coffee", "chair,armchair,sofa,bench,swivel,stool",
-                "rug", "railing", "column", "refrigerator", "stairs,stairway,step", "escalator", "wall",
-                "dog", "plant")
-        self.colors  = np.array([[0, 0, 0],
-                    [0, 0, 255],
-                    [0, 255, 0],
-                    [0, 255, 255],
-                    [255, 0, 0 ],
-                    [255, 0, 255 ], 
-                    [255, 255, 0 ],
-                    [255, 255, 255 ],
-                    [0, 0, 128 ],
-                    [0, 128, 0 ],
-                    [128, 0, 0 ],
-                    [0, 128, 128 ],
-                    [128, 0, 0 ],
-                    [128, 0, 128 ],
-                    [128, 128, 0 ],
-                    [128, 128, 128 ],
-                    [192, 192, 192 ]], dtype=np.uint8)
+        self.visualpoint = False
+        self.names = ("road", "sidewalk", "building", "fence", "wall",
+                "vegetation", "terrain", "car", "bicycle", "bus", "truck", "train", "motorcycle",
+                "sky", "pole", "traffic sign", "traffic light", "person", "rider")
+        self.colors  = np.array([[128, 64, 128],
+           [244, 35, 232],
+           [70, 70, 70],
+           [102, 102, 156],
+           [190, 153, 153],
+           [153, 153, 153],
+           [250, 170, 30],
+           [220, 220, 0],
+           [107, 142, 35],
+           [152, 251, 152],
+           [70, 130, 180],
+           [220, 20, 60],
+           [255, 0, 0],
+           [0, 0, 142],
+           [0, 0, 70],
+           [0, 60, 100],
+           [0, 80, 100],
+           [0, 0, 230],
+           [119, 11, 32],
+           [0, 0, 0]], dtype=np.uint8)
 
     
     def visualize_result(self, data, pred):
         img = data
-
         pred = np.int32(pred)
         pixs = pred.size
         uniques, counts = np.unique(pred, return_counts=True)
-        #for idx in np.argsort(counts)[::-1]:
-        #    name = self.names[uniques[idx]]
-        #    ratio = counts[idx] / pixs * 100
-        #    if ratio > 0.1:
-        #        print("  {}: {:.2f}%".format(name, ratio))
+        for idx in np.argsort(counts)[::-1]:
+            name = self.names[uniques[idx]]
+            ratio = counts[idx] / pixs * 100
+            if ratio > 0.1:
+                print("  {}: {:.2f}%".format(name, ratio))
+
+        # calculate point
+        if self.visualpoint:
+            #转化为灰度float32类型进行处理
+            img = img.copy()
+            img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            img_gray = np.float32(img_gray)
+            #得到角点坐标向量
+            goodfeatures_corners = cv2.goodFeaturesToTrack(img_gray, 400, 0.01, 10)
+            goodfeatures_corners = np.int0(goodfeatures_corners)
+            # 注意学习这种遍历的方法（写法）
+            for i in goodfeatures_corners:
+                #注意到i 是以列表为元素的列表，所以需要flatten或者ravel一下。    
+                x,y = i.flatten()
+                cv2.circle(img,(x,y), 3, [0,255,], -1)
 
         # colorize prediction
         pred_color = colorEncode(pred, self.colors).astype(np.uint8)
 
-        im_vis = img * 0.7 + pred_color * 0.3
+        im_vis = img * 0.5 + pred_color * 0.5
         im_vis = im_vis.astype(np.uint8)
 
         # for vedio result show
