@@ -141,6 +141,9 @@ def main():
 
         img8_out = map16.visualize_result(image, pred)
 
+        #Scaling to preserve Aspect ratio
+        img8_out = cv2.resize(img8_out, (1024, 512), interpolation=cv2.INTER_AREA)
+
       t1 = time.time()
       t2 = time.time()
 
