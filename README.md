@@ -37,14 +37,21 @@ You need to download the [Cityscapes](https://www.cityscapes-dataset.com/)datase
 download the pretrained model on imagenet or the segmentation model from the [official](https://github.com/ydhongHIT/DDRNet)，and put the files in `${PROJECT}/pretrained_models` folder
 
 
-## VAL
+## TEST
 
-use the [official pretrained model](https://github.com/ydhongHIT/DDRNet) and our `eval.py` code. with [ydhongHIT's](https://github.com/ydhongHIT) advice now can reach the same accuracy in the paper. Thanks.
-
+use the [official pretrained model](https://github.com/ydhongHIT/DDRNet). with [ydhongHIT's](https://github.com/ydhongHIT) advice now can reach the same accuracy in the paper. Thanks.
+- For DDRNET23-Slim
 ```python
 cd ${PROJECT}
-python tools/eval.py --cfg experiments/cityscapes/ddrnet23_slim.yaml
+python tools/demo_detect.py --cfg experiments/cityscapes/ddrnet23_slim.yaml --source /path/to/video.mp4 --show True
 ```
+
+- For DDRNet23
+```python
+cd ${PROJECT}
+python tools/demo_detect.py --cfg experiments/cityscapes/ddrnet23.yaml --source /path/to/video.mp4 --show True
+```
+
 
 | model | Train Set | Test Set | OHEM | Multi-scale| Flip | mIoU | Link |
 | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: |
@@ -55,6 +62,7 @@ python tools/eval.py --cfg experiments/cityscapes/ddrnet23_slim.yaml
 
 
 **Note**
+- The `***.yaml` files of DDRNet should have Image size of (1024, 1024) or (512, 512). 
 - with the `ALIGN_CORNERS: false` in `***.yaml` will reach higher accuracy.
 
 
